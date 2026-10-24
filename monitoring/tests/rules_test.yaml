@@ -1,0 +1,45 @@
+rule_files: [rules.generated.yaml]
+evaluation_interval: 15s
+tests:
+  - interval: 15s
+    input_series:
+      - series: 'kube_deployment_status_replicas_available{namespace="ott",deployment="playback"}'
+        values: '2 2 0 0 0 0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: OTTServiceDown
+        exp_alerts:
+          - exp_labels: {severity: critical, team: ott, deployment: playback, app: playback}
+            exp_annotations:
+              summary: "Service playback has ZERO available replicas"
+              description: "Every pod of playback is gone or not ready for 1m. Viewers are affected."
+              runbook: "kubectl -n ott get pods -l app=playback ; kubectl -n ott describe deploy playback ; kubectl -n ott get events --sort-by=.lastTimestamp | tail -20"
+  - interval: 1m
+    input_series:
+      - series: 'http_requests_total{namespace="ott",app="billing",code="200"}'
+        values: '0+60x15'
+      - series: 'http_requests_total{namespace="ott",app="billing",code="503"}'
+        values: '0+20x15'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: OTTHighErrorRate
+        exp_alerts:
+          - exp_labels: {severity: critical, team: ott, app: billing}
+            exp_annotations:
+              summary: "billing 5xx rate is 25%"
+              description: "More than 5% of requests to billing are failing (SLO burn)."
+  - interval: 1m
+    input_series:
+      - series: 'ott_stream_starts_total{namespace="ott",genre="drama",device="web"}'
+        values: '0+10x5 50x10'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: OTTNoStreamStarts
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: OTTNoStreamStarts
+        exp_alerts:
+          - exp_labels: {severity: critical, team: ott, app: playback}
+            exp_annotations:
+              summary: "Nobody has started a stream for 5 minutes"
+              description: "Business KPI flat-lined: playback path broken somewhere (gateway, auth, billing, catalog or playback)."

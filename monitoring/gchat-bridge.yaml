@@ -1,0 +1,49 @@
+# Alertmanager has no native Google Chat receiver, so this tiny bridge
+# (same image, SERVICE=gchat-bridge) turns Alertmanager webhooks into
+# Google Chat messages, one thread per alert (FIRING + RESOLVED together).
+# The Secret "gchat-webhook" is created by scripts/up.sh from $GCHAT_WEBHOOK_URL.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gchat-bridge
+  namespace: monitoring
+  labels:
+    app: gchat-bridge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gchat-bridge
+  template:
+    metadata:
+      labels:
+        app: gchat-bridge
+    spec:
+      containers:
+        - name: bridge
+          image: IMAGE_PLACEHOLDER
+          imagePullPolicy: Always
+          env:
+            - {name: SERVICE, value: gchat-bridge}
+            - {name: GRAFANA_URL, value: "http://localhost:3000"}
+            - name: GCHAT_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef: {name: gchat-webhook, key: url}
+          ports:
+            - {name: http, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+          resources:
+            requests: {cpu: 10m, memory: 48Mi}
+            limits: {cpu: 100m, memory: 128Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gchat-bridge
+  namespace: monitoring
+spec:
+  selector:
+    app: gchat-bridge
+  ports:
+    - {name: http, port: 8080, targetPort: http}

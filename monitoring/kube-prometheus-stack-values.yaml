@@ -1,0 +1,100 @@
+# helm upgrade --install kps prometheus-community/kube-prometheus-stack -n monitoring -f this-file
+fullnameOverride: kps
+
+# EKS hides the control plane: these scrape jobs can never succeed and only create noise alerts
+kubeControllerManager: {enabled: false}
+kubeScheduler: {enabled: false}
+kubeEtcd: {enabled: false}
+kubeProxy: {enabled: false}
+
+defaultRules:
+  create: true
+  rules:
+    etcd: false
+    kubeControllerManager: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+    kubeProxy: false
+
+prometheus:
+  prometheusSpec:
+    # Pick up PodMonitors / ServiceMonitors / Rules from any namespace, not just this release
+    podMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    retention: 2d
+    retentionSize: 3GB
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+    externalLabels:
+      cluster: ott-lab
+    # emptyDir: no EBS volume, no EBS CSI driver needed (lab only — data lost on pod restart)
+    resources:
+      requests: {cpu: 150m, memory: 512Mi}
+      limits: {memory: 1Gi}
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests: {cpu: 20m, memory: 48Mi}
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      receiver: "null"
+      group_by: ["alertname", "app", "deployment"]
+      group_wait: 20s
+      group_interval: 2m
+      repeat_interval: 2h
+      routes:
+        - matchers: ['alertname =~ "Watchdog|InfoInhibitor"']
+          receiver: "null"
+        # Our OTT alerts always go to Google Chat
+        - matchers: ['team = "ott"']
+          receiver: google-chat
+        # Platform alerts from the default rule set: only critical ones, to keep the room quiet
+        - matchers: ['severity = "critical"']
+          receiver: google-chat
+    inhibit_rules:
+      # If the whole service is down, don't also spam about its error rate / latency
+      - source_matchers: ['alertname = "OTTServiceDown"']
+        target_matchers: ['alertname =~ "OTTHighErrorRate|OTTHighLatencyP95|OTTInstanceDown"']
+        equal: ["app"]
+    receivers:
+      - name: "null"
+      - name: google-chat
+        webhook_configs:
+          - url: http://gchat-bridge.monitoring.svc:8080/alert
+            send_resolved: true
+            max_alerts: 20
+
+grafana:
+  # adminPassword is passed with --set by scripts/up.sh
+  defaultDashboardsTimezone: browser
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+  grafana.ini:
+    analytics:
+      check_for_updates: false
+    users:
+      default_theme: dark
+
+kube-state-metrics:
+  resources:
+    requests: {cpu: 10m, memory: 48Mi}
+
+prometheus-node-exporter:
+  resources:
+    requests: {cpu: 10m, memory: 24Mi}
+
+prometheusOperator:
+  resources:
+    requests: {cpu: 20m, memory: 64Mi}

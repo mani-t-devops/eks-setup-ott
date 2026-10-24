@@ -1,0 +1,131 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ott-alerts
+  namespace: monitoring
+spec:
+  groups:
+    # ---------------------------------------------------------- availability
+    - name: ott.availability
+      rules:
+        - alert: OTTServiceDown
+          expr: |
+            label_replace(
+              sum by (deployment) (kube_deployment_status_replicas_available{namespace="ott"}) == 0,
+              "app", "$1", "deployment", "(.*)")
+          for: 1m
+          labels: {severity: critical, team: ott}
+          annotations:
+            summary: "Service {{ $labels.deployment }} has ZERO available replicas"
+            description: "Every pod of {{ $labels.deployment }} is gone or not ready for 1m. Viewers are affected."
+            runbook: "kubectl -n ott get pods -l app={{ $labels.deployment }} ; kubectl -n ott describe deploy {{ $labels.deployment }} ; kubectl -n ott get events --sort-by=.lastTimestamp | tail -20"
+
+        - alert: OTTInstanceDown
+          expr: up{namespace="ott"} == 0
+          for: 2m
+          labels: {severity: warning, team: ott}
+          annotations:
+            summary: "Prometheus cannot scrape {{ $labels.app }} pod {{ $labels.pod }}"
+            description: "Target has been down for 2m (pod crashed, not ready, or /metrics broken)."
+
+        - alert: OTTDeploymentDegraded
+          expr: |
+            kube_deployment_status_replicas_available{namespace="ott"}
+              < kube_deployment_spec_replicas{namespace="ott"}
+          for: 5m
+          labels: {severity: warning, team: ott}
+          annotations:
+            summary: "{{ $labels.deployment }} running below desired replicas"
+            description: "{{ $value }} replicas available — reduced redundancy for 5m."
+
+        - alert: OTTPodCrashLooping
+          expr: increase(kube_pod_container_status_restarts_total{namespace="ott"}[10m]) > 2
+          labels: {severity: critical, team: ott}
+          annotations:
+            summary: "Pod {{ $labels.pod }} is crash-looping"
+            description: "{{ $value | humanize }} restarts in 10m. Check: kubectl -n ott logs {{ $labels.pod }} --previous"
+
+    # ---------------------------------------------------------- golden signals
+    - name: ott.golden-signals
+      rules:
+        - record: ott:http_requests:rate5m
+          expr: sum by (app) (rate(http_requests_total{namespace="ott"}[5m]))
+        - record: ott:http_errors:ratio5m
+          expr: |
+            sum by (app) (rate(http_requests_total{namespace="ott",code=~"5.."}[5m]))
+              / sum by (app) (rate(http_requests_total{namespace="ott"}[5m]))
+        - record: ott:http_latency:p95_5m
+          expr: histogram_quantile(0.95, sum by (le, app) (rate(http_request_duration_seconds_bucket{namespace="ott"}[5m])))
+
+        - alert: OTTHighErrorRate
+          expr: ott:http_errors:ratio5m > 0.05 and ott:http_requests:rate5m > 0.1
+          for: 3m
+          labels: {severity: critical, team: ott}
+          annotations:
+            summary: "{{ $labels.app }} 5xx rate is {{ $value | humanizePercentage }}"
+            description: "More than 5% of requests to {{ $labels.app }} are failing (SLO burn)."
+
+        - alert: OTTHighLatencyP95
+          expr: ott:http_latency:p95_5m > 1
+          for: 5m
+          labels: {severity: warning, team: ott}
+          annotations:
+            summary: "{{ $labels.app }} p95 latency is {{ $value | humanizeDuration }}"
+            description: "p95 above 1s for 5m."
+
+        - alert: OTTDownstreamFailures
+          expr: sum by (app, target) (rate(downstream_errors_total{namespace="ott"}[5m])) > 0.2
+          for: 3m
+          labels: {severity: warning, team: ott}
+          annotations:
+            summary: "{{ $labels.app }} cannot reach {{ $labels.target }}"
+            description: "{{ $value | humanize }} failed calls/s from {{ $labels.app }} to {{ $labels.target }}."
+
+    # ---------------------------------------------------------- business / QoE
+    - name: ott.business
+      rules:
+        - alert: OTTNoStreamStarts
+          expr: (sum(rate(ott_stream_starts_total[5m])) or vector(0)) == 0
+          for: 5m
+          labels: {severity: critical, team: ott, app: playback}
+          annotations:
+            summary: "Nobody has started a stream for 5 minutes"
+            description: "Business KPI flat-lined: playback path broken somewhere (gateway, auth, billing, catalog or playback)."
+
+        - alert: OTTHighBufferingRatio
+          expr: sum(rate(ott_buffering_events_total[5m])) / sum(rate(ott_stream_starts_total[5m])) > 0.3
+          for: 5m
+          labels: {severity: warning, team: ott, app: playback}
+          annotations:
+            summary: "Rebuffering ratio {{ $value | humanizePercentage }}"
+            description: "Viewers are seeing the spinner. Check playback latency / CDN."
+
+        - alert: OTTPaymentFailures
+          expr: |
+            sum(rate(ott_payments_total{status!="success"}[10m]))
+              / sum(rate(ott_payments_total[10m])) > 0.15
+          for: 5m
+          labels: {severity: critical, team: ott, app: billing}
+          annotations:
+            summary: "Payment failure rate {{ $value | humanizePercentage }}"
+            description: "Revenue impact: subscriptions failing."
+
+    # ---------------------------------------------------------- cluster
+    - name: ott.cluster
+      rules:
+        - alert: LabNodeNotReady
+          expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+          for: 2m
+          labels: {severity: critical, team: ott}
+          annotations:
+            summary: "Node {{ $labels.node }} NotReady (Spot interruption?)"
+            description: "Pods will be rescheduled. Check: kubectl get nodes ; kubectl describe node {{ $labels.node }}"
+
+        - alert: OTTContainerOOMKilled
+          expr: |
+            kube_pod_container_status_last_terminated_reason{namespace="ott",reason="OOMKilled"} == 1
+              and on (pod, container) increase(kube_pod_container_status_restarts_total{namespace="ott"}[10m]) > 0
+          labels: {severity: warning, team: ott}
+          annotations:
+            summary: "{{ $labels.pod }} was OOMKilled"
+            description: "Container {{ $labels.container }} exceeded its memory limit."

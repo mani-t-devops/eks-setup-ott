@@ -1,0 +1,19 @@
+# Scrape every pod that is part of the OTT app on its "http" port.
+# podTargetLabels copies the pod's app/tier labels onto every series,
+# so dashboards and alerts can say  sum by (app) (...)
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: ott-services
+  namespace: monitoring
+spec:
+  namespaceSelector:
+    matchNames: [ott]
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: ott-lab
+  podTargetLabels: [app, tier]
+  podMetricsEndpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

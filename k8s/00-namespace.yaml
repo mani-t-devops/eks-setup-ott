@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ott
+  labels:
+    app.kubernetes.io/part-of: ott-lab
+---
+# Keep the critical path alive during node drains / Spot interruptions
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gateway
+  namespace: ott
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: gateway
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: playback
+  namespace: ott
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: playback

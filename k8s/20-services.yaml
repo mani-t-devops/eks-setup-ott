@@ -1,0 +1,361 @@
+# Generated: 6 OTT microservices (StreamFlix). Image is substituted by scripts/up.sh
+---
+# API gateway / BFF for TV, mobile and web apps
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: ott
+  labels: &labels
+    app: gateway
+    tier: edge
+    app.kubernetes.io/part-of: ott-lab
+    tags.datadoghq.com/env: lab
+    tags.datadoghq.com/service: gateway
+    tags.datadoghq.com/version: "1.0.0"
+spec:
+  replicas: 2
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels: *labels
+      annotations:
+        ad.datadoghq.com/app.checks: |
+          {"openmetrics":{"init_config":{},"instances":[{"openmetrics_endpoint":"http://%%host%%:8080/metrics","namespace":"ottlab","metrics":["http_requests","http_request_duration_seconds","downstream_errors","ott_.*"],"tags":["app:gateway"]}]}}
+    spec:
+      containers:
+        - name: app
+          image: IMAGE_PLACEHOLDER
+          imagePullPolicy: Always
+          env:
+            - {name: SERVICE, value: gateway}
+            - {name: REDIS_HOST, value: redis}
+          ports:
+            - {name: http, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 50m, memory: 80Mi}
+            limits: {cpu: 300m, memory: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: ott
+  labels:
+    app: gateway
+spec:
+  selector:
+    app: gateway
+  ports:
+    - {name: http, port: 8080, targetPort: http}
+---
+# Login and token verification
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth
+  namespace: ott
+  labels: &labels
+    app: auth
+    tier: core
+    app.kubernetes.io/part-of: ott-lab
+    tags.datadoghq.com/env: lab
+    tags.datadoghq.com/service: auth
+    tags.datadoghq.com/version: "1.0.0"
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: auth
+  template:
+    metadata:
+      labels: *labels
+      annotations:
+        ad.datadoghq.com/app.checks: |
+          {"openmetrics":{"init_config":{},"instances":[{"openmetrics_endpoint":"http://%%host%%:8080/metrics","namespace":"ottlab","metrics":["http_requests","http_request_duration_seconds","downstream_errors","ott_.*"],"tags":["app:auth"]}]}}
+    spec:
+      containers:
+        - name: app
+          image: IMAGE_PLACEHOLDER
+          imagePullPolicy: Always
+          env:
+            - {name: SERVICE, value: auth}
+            - {name: REDIS_HOST, value: redis}
+          ports:
+            - {name: http, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 50m, memory: 80Mi}
+            limits: {cpu: 300m, memory: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth
+  namespace: ott
+  labels:
+    app: auth
+spec:
+  selector:
+    app: auth
+  ports:
+    - {name: http, port: 8080, targetPort: http}
+---
+# Title metadata, Redis-cached
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog
+  namespace: ott
+  labels: &labels
+    app: catalog
+    tier: core
+    app.kubernetes.io/part-of: ott-lab
+    tags.datadoghq.com/env: lab
+    tags.datadoghq.com/service: catalog
+    tags.datadoghq.com/version: "1.0.0"
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: catalog
+  template:
+    metadata:
+      labels: *labels
+      annotations:
+        ad.datadoghq.com/app.checks: |
+          {"openmetrics":{"init_config":{},"instances":[{"openmetrics_endpoint":"http://%%host%%:8080/metrics","namespace":"ottlab","metrics":["http_requests","http_request_duration_seconds","downstream_errors","ott_.*"],"tags":["app:catalog"]}]}}
+    spec:
+      containers:
+        - name: app
+          image: IMAGE_PLACEHOLDER
+          imagePullPolicy: Always
+          env:
+            - {name: SERVICE, value: catalog}
+            - {name: REDIS_HOST, value: redis}
+          ports:
+            - {name: http, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 50m, memory: 80Mi}
+            limits: {cpu: 300m, memory: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog
+  namespace: ott
+  labels:
+    app: catalog
+spec:
+  selector:
+    app: catalog
+  ports:
+    - {name: http, port: 8080, targetPort: http}
+---
+# Personalised rows (calls catalog)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendation
+  namespace: ott
+  labels: &labels
+    app: recommendation
+    tier: core
+    app.kubernetes.io/part-of: ott-lab
+    tags.datadoghq.com/env: lab
+    tags.datadoghq.com/service: recommendation
+    tags.datadoghq.com/version: "1.0.0"
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: recommendation
+  template:
+    metadata:
+      labels: *labels
+      annotations:
+        ad.datadoghq.com/app.checks: |
+          {"openmetrics":{"init_config":{},"instances":[{"openmetrics_endpoint":"http://%%host%%:8080/metrics","namespace":"ottlab","metrics":["http_requests","http_request_duration_seconds","downstream_errors","ott_.*"],"tags":["app:recommendation"]}]}}
+    spec:
+      containers:
+        - name: app
+          image: IMAGE_PLACEHOLDER
+          imagePullPolicy: Always
+          env:
+            - {name: SERVICE, value: recommendation}
+            - {name: REDIS_HOST, value: redis}
+          ports:
+            - {name: http, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 50m, memory: 80Mi}
+            limits: {cpu: 300m, memory: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: recommendation
+  namespace: ott
+  labels:
+    app: recommendation
+spec:
+  selector:
+    app: recommendation
+  ports:
+    - {name: http, port: 8080, targetPort: http}
+---
+# Starts streams, DRM, bitrate (calls billing + catalog)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: playback
+  namespace: ott
+  labels: &labels
+    app: playback
+    tier: critical
+    app.kubernetes.io/part-of: ott-lab
+    tags.datadoghq.com/env: lab
+    tags.datadoghq.com/service: playback
+    tags.datadoghq.com/version: "1.0.0"
+spec:
+  replicas: 2
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: playback
+  template:
+    metadata:
+      labels: *labels
+      annotations:
+        ad.datadoghq.com/app.checks: |
+          {"openmetrics":{"init_config":{},"instances":[{"openmetrics_endpoint":"http://%%host%%:8080/metrics","namespace":"ottlab","metrics":["http_requests","http_request_duration_seconds","downstream_errors","ott_.*"],"tags":["app:playback"]}]}}
+    spec:
+      containers:
+        - name: app
+          image: IMAGE_PLACEHOLDER
+          imagePullPolicy: Always
+          env:
+            - {name: SERVICE, value: playback}
+            - {name: REDIS_HOST, value: redis}
+          ports:
+            - {name: http, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 50m, memory: 80Mi}
+            limits: {cpu: 300m, memory: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: playback
+  namespace: ott
+  labels:
+    app: playback
+spec:
+  selector:
+    app: playback
+  ports:
+    - {name: http, port: 8080, targetPort: http}
+---
+# Entitlements and payments
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billing
+  namespace: ott
+  labels: &labels
+    app: billing
+    tier: core
+    app.kubernetes.io/part-of: ott-lab
+    tags.datadoghq.com/env: lab
+    tags.datadoghq.com/service: billing
+    tags.datadoghq.com/version: "1.0.0"
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: billing
+  template:
+    metadata:
+      labels: *labels
+      annotations:
+        ad.datadoghq.com/app.checks: |
+          {"openmetrics":{"init_config":{},"instances":[{"openmetrics_endpoint":"http://%%host%%:8080/metrics","namespace":"ottlab","metrics":["http_requests","http_request_duration_seconds","downstream_errors","ott_.*"],"tags":["app:billing"]}]}}
+    spec:
+      containers:
+        - name: app
+          image: IMAGE_PLACEHOLDER
+          imagePullPolicy: Always
+          env:
+            - {name: SERVICE, value: billing}
+            - {name: REDIS_HOST, value: redis}
+          ports:
+            - {name: http, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 50m, memory: 80Mi}
+            limits: {cpu: 300m, memory: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: billing
+  namespace: ott
+  labels:
+    app: billing
+spec:
+  selector:
+    app: billing
+  ports:
+    - {name: http, port: 8080, targetPort: http}

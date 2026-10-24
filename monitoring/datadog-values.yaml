@@ -1,0 +1,41 @@
+# helm upgrade --install datadog datadog/datadog -n datadog -f this-file
+# Secret "datadog-keys" (api-key, app-key) is created by scripts/up.sh
+datadog:
+  site: datadoghq.com          # change to datadoghq.eu / us5.datadoghq.com etc. to match your account
+  clusterName: ott-lab
+  apiKeyExistingSecret: datadog-keys
+  appKeyExistingSecret: datadog-keys
+  tags:
+    - env:lab
+    - project:ott-eks-lab
+  kubelet:
+    tlsVerify: false           # EKS kubelet certs are not signed for the node IP
+  kubeStateMetricsCore:
+    enabled: true              # kubernetes_state.* metrics -> "deployment has 0 replicas" monitors
+  # Keep usage small / free-plan friendly
+  logs:
+    enabled: false
+  apm:
+    instrumentation:
+      enabled: false
+  processAgent:
+    enabled: true
+    processCollection: false
+  networkMonitoring:
+    enabled: false
+  orchestratorExplorer:
+    enabled: true
+  # The OTT pods carry ad.datadoghq.com/app.checks annotations (OpenMetrics) — nothing else needed
+
+clusterAgent:
+  enabled: true
+  replicas: 1
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+
+agents:
+  containers:
+    agent:
+      resources:
+        requests: {cpu: 100m, memory: 192Mi}
+        limits: {memory: 384Mi}

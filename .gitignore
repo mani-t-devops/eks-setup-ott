@@ -1,0 +1,7 @@
+.env
+.image
+*.tfstate*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+monitoring/tests/rules.generated.yaml

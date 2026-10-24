@@ -1,0 +1,8 @@
+# cp terraform.tfvars.example terraform.tfvars  and edit
+region             = "us-east-1"
+cluster_name       = "ott-lab"
+kubernetes_version = "1.35"
+budget_email       = "you@example.com"
+monthly_budget_usd = 10
+# Lock the API endpoint to your own IP:  curl -s ifconfig.me
+admin_cidrs = ["REPLACE_WITH_YOUR_PUBLIC_IP/32"]

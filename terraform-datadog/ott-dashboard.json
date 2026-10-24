@@ -1,0 +1,384 @@
+{
+  "title": "StreamFlix \u2014 OTT Lab (EKS)",
+  "description": "Managed by terraform-datadog",
+  "layout_type": "ordered",
+  "reflow_type": "fixed",
+  "template_variables": [],
+  "widgets": [
+    {
+      "definition": {
+        "type": "note",
+        "content": "## StreamFlix OTT lab\nMetrics come from the app's `/metrics` endpoint via OpenMetrics autodiscovery (namespace `ottlab`) plus Kubernetes state from the cluster agent.",
+        "background_color": "blue",
+        "font_size": "14",
+        "show_tick": false
+      },
+      "layout": {
+        "x": 0,
+        "y": 0,
+        "width": 12,
+        "height": 1
+      }
+    },
+    {
+      "definition": {
+        "type": "query_value",
+        "title": "Active streams",
+        "precision": 1,
+        "autoscale": true,
+        "requests": [
+          {
+            "response_format": "scalar",
+            "queries": [
+              {
+                "name": "q1",
+                "data_source": "metrics",
+                "query": "sum:ottlab.ott_active_streams{kube_namespace:ott}",
+                "aggregator": "last"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ],
+            "conditional_formats": []
+          }
+        ]
+      },
+      "layout": {
+        "x": 0,
+        "y": 1,
+        "width": 3,
+        "height": 2
+      }
+    },
+    {
+      "definition": {
+        "type": "query_value",
+        "title": "Stream starts (5m)",
+        "precision": 1,
+        "autoscale": true,
+        "requests": [
+          {
+            "response_format": "scalar",
+            "queries": [
+              {
+                "name": "q1",
+                "data_source": "metrics",
+                "query": "sum:ottlab.ott_stream_starts.count{kube_namespace:ott}.as_count().rollup(sum, 300)",
+                "aggregator": "last"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ],
+            "conditional_formats": [
+              {
+                "comparator": "<",
+                "value": 1,
+                "palette": "white_on_red"
+              },
+              {
+                "comparator": ">=",
+                "value": 1,
+                "palette": "white_on_green"
+              }
+            ]
+          }
+        ]
+      },
+      "layout": {
+        "x": 3,
+        "y": 1,
+        "width": 3,
+        "height": 2
+      }
+    },
+    {
+      "definition": {
+        "type": "query_value",
+        "title": "Unavailable replicas",
+        "precision": 1,
+        "autoscale": true,
+        "requests": [
+          {
+            "response_format": "scalar",
+            "queries": [
+              {
+                "name": "q1",
+                "data_source": "metrics",
+                "query": "sum:kubernetes_state.deployment.replicas_unavailable{kube_namespace:ott}",
+                "aggregator": "last"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ],
+            "conditional_formats": []
+          }
+        ]
+      },
+      "layout": {
+        "x": 6,
+        "y": 1,
+        "width": 3,
+        "height": 2
+      }
+    },
+    {
+      "definition": {
+        "type": "query_value",
+        "title": "Pods restarting (waiting)",
+        "precision": 1,
+        "autoscale": true,
+        "requests": [
+          {
+            "response_format": "scalar",
+            "queries": [
+              {
+                "name": "q1",
+                "data_source": "metrics",
+                "query": "sum:kubernetes_state.container.status_report.count.waiting{kube_namespace:ott}",
+                "aggregator": "last"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ],
+            "conditional_formats": []
+          }
+        ]
+      },
+      "layout": {
+        "x": 9,
+        "y": 1,
+        "width": 3,
+        "height": 2
+      }
+    },
+    {
+      "definition": {
+        "type": "toplist",
+        "title": "Available replicas per service",
+        "requests": [
+          {
+            "response_format": "scalar",
+            "queries": [
+              {
+                "name": "q1",
+                "data_source": "metrics",
+                "query": "sum:kubernetes_state.deployment.replicas_available{kube_namespace:ott} by {kube_deployment}",
+                "aggregator": "last"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1",
+                "limit": {
+                  "count": 20,
+                  "order": "asc"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "layout": {
+        "x": 0,
+        "y": 3,
+        "width": 4,
+        "height": 3
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Requests/s by service",
+        "show_legend": true,
+        "legend_layout": "auto",
+        "requests": [
+          {
+            "response_format": "timeseries",
+            "queries": [
+              {
+                "name": "q1",
+                "data_source": "metrics",
+                "query": "sum:ottlab.http_requests.count{kube_namespace:ott} by {app}.as_rate()"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ],
+            "display_type": "line"
+          }
+        ]
+      },
+      "layout": {
+        "x": 4,
+        "y": 3,
+        "width": 8,
+        "height": 3
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "5xx error % by service",
+        "show_legend": true,
+        "legend_layout": "auto",
+        "requests": [
+          {
+            "response_format": "timeseries",
+            "queries": [
+              {
+                "name": "q1",
+                "data_source": "metrics",
+                "query": "sum:ottlab.http_requests.count{kube_namespace:ott,code:5*} by {app}.as_count()"
+              },
+              {
+                "name": "q2",
+                "data_source": "metrics",
+                "query": "sum:ottlab.http_requests.count{kube_namespace:ott} by {app}.as_count()"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "100 * q1 / q2"
+              }
+            ],
+            "display_type": "line"
+          }
+        ]
+      },
+      "layout": {
+        "x": 0,
+        "y": 6,
+        "width": 6,
+        "height": 3
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Stream starts by genre",
+        "show_legend": true,
+        "legend_layout": "auto",
+        "requests": [
+          {
+            "response_format": "timeseries",
+            "queries": [
+              {
+                "name": "q1",
+                "data_source": "metrics",
+                "query": "sum:ottlab.ott_stream_starts.count{kube_namespace:ott} by {genre}.as_count()"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ],
+            "display_type": "bars"
+          }
+        ]
+      },
+      "layout": {
+        "x": 6,
+        "y": 6,
+        "width": 6,
+        "height": 3
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Payments by status",
+        "show_legend": true,
+        "legend_layout": "auto",
+        "requests": [
+          {
+            "response_format": "timeseries",
+            "queries": [
+              {
+                "name": "q1",
+                "data_source": "metrics",
+                "query": "sum:ottlab.ott_payments.count{kube_namespace:ott} by {status}.as_count()"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ],
+            "display_type": "bars"
+          }
+        ]
+      },
+      "layout": {
+        "x": 0,
+        "y": 9,
+        "width": 6,
+        "height": 3
+      }
+    },
+    {
+      "definition": {
+        "type": "timeseries",
+        "title": "Container CPU by deployment",
+        "show_legend": true,
+        "legend_layout": "auto",
+        "requests": [
+          {
+            "response_format": "timeseries",
+            "queries": [
+              {
+                "name": "q1",
+                "data_source": "metrics",
+                "query": "sum:kubernetes.cpu.usage.total{kube_namespace:ott} by {kube_deployment}"
+              }
+            ],
+            "formulas": [
+              {
+                "formula": "q1"
+              }
+            ],
+            "display_type": "line"
+          }
+        ]
+      },
+      "layout": {
+        "x": 6,
+        "y": 9,
+        "width": 6,
+        "height": 3
+      }
+    },
+    {
+      "definition": {
+        "type": "manage_status",
+        "title": "OTT monitors",
+        "query": "tag:project:ott-eks-lab",
+        "display_format": "countsAndList",
+        "color_preference": "text",
+        "hide_zero_counts": true,
+        "summary_type": "monitors",
+        "sort": "status,asc"
+      },
+      "layout": {
+        "x": 0,
+        "y": 12,
+        "width": 12,
+        "height": 3
+      }
+    }
+  ]
+}
