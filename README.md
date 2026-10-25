@@ -44,16 +44,16 @@ The lab defaults are tuned to reduce (not eliminate) AWS charges:
 | Choice | Saves |
 |---|---|
 | No NAT gateway (nodes in public subnets) | about $33/month |
-| 1 × t3.micro **Spot** node by default (node-group maximum 1) | smallest default worker profile; Spot is discounted but still billable |
+| 2 × t3.small **Spot** nodes by default (fixed node-group size) | small workers provide enough pod slots for this lab; Spot is discounted but still billable |
 | Kubernetes **1.35**: standard support until 27 Mar 2027 | avoids the 6× extended-support price |
 | Grafana / Prometheus / the app reached via `port-forward`, no LoadBalancers | about $16/month per LB |
 | Prometheus on `emptyDir` with 2-day retention, no persistent monitoring volume | monitoring storage and CSI driver (the worker's EBS root disk still costs money) |
 | Control-plane logging off; ECR keeps only 5 images | CloudWatch and storage |
 | A $10 AWS Budget emails at 80% forecast and 100% actual | surprises (alerts only; not a spend cap) |
 
-The EKS control plane is the unavoidable baseline. With the default single Spot worker in us-east-1, expect additional hourly charges for EC2, its EBS root disk, and the worker's public IPv4 address. Prices and Spot capacity vary; use the AWS Pricing Calculator for a current estimate. A short session still incurs EKS charges for every hour the cluster exists, and budgets only notify you—they do not stop resources or cap spending. The micro profile reduces pod requests and replica counts to fit a tiny node, but is best-effort: if pods remain Pending or are OOMKilled, use the smallest instance type your account permits with at least 2 GiB of RAM (this costs more and may not be Free Tier eligible).
+The EKS control plane is the unavoidable baseline. With the default two Spot workers in us-east-1, expect additional hourly charges for EC2, EBS root disks, and public IPv4 addresses. Prices and Spot capacity vary; use the AWS Pricing Calculator for a current estimate. A short session still incurs EKS charges for every hour the cluster exists, and budgets only notify you—they do not stop resources or cap spending. The two-small-node profile and reduced pod requests are intended to avoid the one-micro node's pod-capacity limit, but remain a constrained lab configuration; if pods remain Pending or are OOMKilled, use a larger instance type (at higher cost).
 
-**Free Tier instance eligibility is separate from Spot pricing.** Check eligible types for your account and region with `aws ec2 describe-instance-types --region us-east-1 --filters Name=free-tier-eligible,Values=true --query 'InstanceTypes[].InstanceType' --output table`. The default `t3.micro` is only usable if your account/region permits that type and Spot capacity is available; Spot does not make an otherwise ineligible type eligible. A micro is severely resource constrained, so the lab uses reduced pod resources and replicas and may still need a larger permitted type. Set `node_instance_types` in `terraform/terraform.tfvars` to the type your account permits. EKS itself remains billable either way.
+**Free Tier instance eligibility is separate from Spot pricing.** Check eligible types for your account and region with `aws ec2 describe-instance-types --region us-east-1 --filters Name=free-tier-eligible,Values=true --query 'InstanceTypes[].InstanceType' --output table`. The default `t3.small` must be eligible in your account and have Spot capacity available; Spot does not make an otherwise ineligible type eligible. If AWS rejects it, choose an allowed type in `node_instance_types` in `terraform/terraform.tfvars`; a single micro cannot host the full chart because it runs out of pod slots. EKS itself remains billable either way.
 
 > **Run `make down` when you finish each session.** This destroys the EKS cluster and worker resources; verify the leftover checks and Billing afterward. The budget is not an automatic shutdown mechanism.
 
@@ -85,7 +85,7 @@ make up                                                       # ~20–25 minutes
 ```
 
 `scripts/up.sh` does, in order:
-1. Terraform: VPC (no NAT Gateway), EKS 1.35, single-node Spot group, ECR repo, budget
+1. Terraform: VPC (no NAT Gateway), EKS 1.35, two-node Spot group, ECR repo, budget
 2. Builds the app image and pushes it to ECR
 3. Installs `kube-prometheus-stack` (Prometheus, Alertmanager, Grafana, node-exporter, kube-state-metrics)
 4. Deploys the Google Chat bridge, the PodMonitor, 15 alert/recording rules and the Grafana dashboard

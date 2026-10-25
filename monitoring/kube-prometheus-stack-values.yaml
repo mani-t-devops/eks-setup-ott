@@ -92,6 +92,8 @@ kube-state-metrics:
     requests: {cpu: 5m, memory: 24Mi}
 
 prometheus-node-exporter:
+  # Free a pod slot on each small worker; kubelet/container metrics remain available.
+  enabled: false
   resources:
     requests: {cpu: 5m, memory: 16Mi}
 

@@ -16,14 +16,14 @@ variable "kubernetes_version" {
 }
 
 variable "node_instance_types" {
-  description = "Smallest low-cost worker default. Confirm eligibility in your AWS account; the micro node profile is resource-constrained."
+  description = "Two small Spot workers provide enough pod slots for the lab. Confirm instance-type eligibility and Spot availability in your account."
   type        = list(string)
-  default     = ["t3.micro"]
+  default     = ["t3.small"]
 }
 
 variable "node_desired" {
   type    = number
-  default = 1
+  default = 2
 }
 
 variable "owner" {
