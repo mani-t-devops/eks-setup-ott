@@ -34,7 +34,7 @@ case "$cmd" in
   reset)     if [ -n "$svc" ]; then post "$svc" /chaos '{"latency_ms":0,"error_rate":0,"ready":true}'
                kubectl -n $NS set resources deploy "$svc" -c app --limits=memory=256Mi,cpu=300m; fi
              kubectl -n $NS scale deploy --all --replicas=1
-             kubectl -n $NS scale deploy gateway playback --replicas=2 ;;
+             kubectl -n $NS scale deploy gateway playback --replicas=1 ;;
   *) cat <<EOF
 usage: $0 <scenario> <service> [value]
   kill <svc>              scale to 0            -> service down alert

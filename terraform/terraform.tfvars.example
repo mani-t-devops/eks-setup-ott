@@ -2,6 +2,8 @@
 region             = "us-east-1"
 cluster_name       = "ott-lab"
 kubernetes_version = "1.35"
+node_instance_types = ["t3.micro"]
+node_desired        = 1
 budget_email       = "you@example.com"
 monthly_budget_usd = 10
 # Lock the API endpoint to your own IP:  curl -s ifconfig.me

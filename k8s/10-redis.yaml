@@ -31,8 +31,8 @@ spec:
             tcpSocket: {port: redis}
             periodSeconds: 5
           resources:
-            requests: {cpu: 25m, memory: 32Mi}
-            limits: {cpu: 200m, memory: 96Mi}
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {cpu: 100m, memory: 64Mi}
 ---
 apiVersion: v1
 kind: Service

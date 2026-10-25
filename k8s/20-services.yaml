@@ -14,7 +14,7 @@ metadata:
     tags.datadoghq.com/service: gateway
     tags.datadoghq.com/version: "1.0.0"
 spec:
-  replicas: 2
+  replicas: 1
   revisionHistoryLimit: 2
   selector:
     matchLabels:
@@ -44,8 +44,8 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
           resources:
-            requests: {cpu: 50m, memory: 80Mi}
-            limits: {cpu: 300m, memory: 256Mi}
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {cpu: 150m, memory: 128Mi}
 ---
 apiVersion: v1
 kind: Service
@@ -104,8 +104,8 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
           resources:
-            requests: {cpu: 50m, memory: 80Mi}
-            limits: {cpu: 300m, memory: 256Mi}
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {cpu: 150m, memory: 128Mi}
 ---
 apiVersion: v1
 kind: Service
@@ -164,8 +164,8 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
           resources:
-            requests: {cpu: 50m, memory: 80Mi}
-            limits: {cpu: 300m, memory: 256Mi}
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {cpu: 150m, memory: 128Mi}
 ---
 apiVersion: v1
 kind: Service
@@ -224,8 +224,8 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
           resources:
-            requests: {cpu: 50m, memory: 80Mi}
-            limits: {cpu: 300m, memory: 256Mi}
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {cpu: 150m, memory: 128Mi}
 ---
 apiVersion: v1
 kind: Service
@@ -254,7 +254,7 @@ metadata:
     tags.datadoghq.com/service: playback
     tags.datadoghq.com/version: "1.0.0"
 spec:
-  replicas: 2
+  replicas: 1
   revisionHistoryLimit: 2
   selector:
     matchLabels:
@@ -284,8 +284,8 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
           resources:
-            requests: {cpu: 50m, memory: 80Mi}
-            limits: {cpu: 300m, memory: 256Mi}
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {cpu: 150m, memory: 128Mi}
 ---
 apiVersion: v1
 kind: Service
@@ -344,8 +344,8 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
           resources:
-            requests: {cpu: 50m, memory: 80Mi}
-            limits: {cpu: 300m, memory: 256Mi}
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {cpu: 150m, memory: 128Mi}
 ---
 apiVersion: v1
 kind: Service

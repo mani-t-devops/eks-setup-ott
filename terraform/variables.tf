@@ -16,9 +16,9 @@ variable "kubernetes_version" {
 }
 
 variable "node_instance_types" {
-  description = "Spot pool. A single 2 vCPU / 4 GiB node is the lab's low-cost default; Datadog is optional."
+  description = "Smallest low-cost worker default. Confirm eligibility in your AWS account; the micro node profile is resource-constrained."
   type        = list(string)
-  default     = ["t3.medium", "t3a.medium"]
+  default     = ["t3.micro"]
 }
 
 variable "node_desired" {

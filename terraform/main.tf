@@ -67,7 +67,7 @@ module "eks" {
       instance_types = var.node_instance_types
 
       min_size     = 1
-      max_size     = 2
+      max_size     = 1
       desired_size = var.node_desired
 
       disk_size = 20

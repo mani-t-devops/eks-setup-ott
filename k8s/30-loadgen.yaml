@@ -30,5 +30,5 @@ spec:
           ports:
             - {name: metrics, containerPort: 8080}
           resources:
-            requests: {cpu: 50m, memory: 64Mi}
-            limits: {cpu: 300m, memory: 192Mi}
+            requests: {cpu: 10m, memory: 24Mi}
+            limits: {cpu: 100m, memory: 96Mi}

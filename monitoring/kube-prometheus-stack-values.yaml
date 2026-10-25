@@ -22,21 +22,21 @@ prometheus:
     podMonitorSelectorNilUsesHelmValues: false
     serviceMonitorSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
-    retention: 2d
-    retentionSize: 3GB
+    retention: 1d
+    retentionSize: 1GB
     scrapeInterval: 15s
     evaluationInterval: 15s
     externalLabels:
       cluster: ott-lab
     # emptyDir: no EBS volume, no EBS CSI driver needed (lab only — data lost on pod restart)
     resources:
-      requests: {cpu: 150m, memory: 512Mi}
-      limits: {memory: 1Gi}
+      requests: {cpu: 50m, memory: 128Mi}
+      limits: {memory: 384Mi}
 
 alertmanager:
   alertmanagerSpec:
     resources:
-      requests: {cpu: 20m, memory: 48Mi}
+      requests: {cpu: 5m, memory: 24Mi}
   config:
     global:
       resolve_timeout: 5m
@@ -80,7 +80,7 @@ grafana:
       provider:
         foldersFromFilesStructure: true
   resources:
-    requests: {cpu: 50m, memory: 128Mi}
+    requests: {cpu: 10m, memory: 48Mi}
   grafana.ini:
     analytics:
       check_for_updates: false
@@ -89,12 +89,12 @@ grafana:
 
 kube-state-metrics:
   resources:
-    requests: {cpu: 10m, memory: 48Mi}
+    requests: {cpu: 5m, memory: 24Mi}
 
 prometheus-node-exporter:
   resources:
-    requests: {cpu: 10m, memory: 24Mi}
+    requests: {cpu: 5m, memory: 16Mi}
 
 prometheusOperator:
   resources:
-    requests: {cpu: 20m, memory: 64Mi}
+    requests: {cpu: 5m, memory: 32Mi}
